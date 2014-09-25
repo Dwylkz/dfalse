@@ -35,7 +35,7 @@ typedef enum token_e {
   QUOTE = '"',
   TOCHAR = ',',
   GETC = '^',
-  __BOUND__
+  __BOUND__ = 300
 } token_e;
 
 typedef struct token_t {
@@ -59,34 +59,6 @@ static void err_msg(const char* fmt, ...)
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
   va_end(ap);
-}
-
-static void set_token(token_t* token, const token_e type, const char* data, const size_t size,
-               const char*head, const int line)
-{
-  token->type = type;
-  token->data = data;
-  token->size = size;
-  token->head = head;
-  token->line = line;
-}
-
-static void token_err(token_t* token, const char* msg)
-{
-  char prefix[BUFSIZ];
-  sprintf(prefix, "%d:%d:", token->line, token->data-token->head+1);
-  err_msg("%s %s from", prefix, msg);
-
-  char foo[BUFSIZ];
-  int len = token->data-token->head;
-  snprintf(foo, len+token->size+1, "%s", token->head);
-  err_msg("%s %s", prefix, foo);
-
-  for (int i = 0; i < len; i++)
-    foo[i] = ' ';
-  foo[len] = '^';
-  foo[len+1] = '\0';
-  err_msg("%s %s", prefix, foo);
 }
 
 static char* loadfile(const char* filename)
@@ -123,9 +95,37 @@ err_0:
   return NULL;
 }
 
+static void set_token(token_t* token, const token_e type, const char* data, const size_t size,
+               const char*head, const int line)
+{
+  token->type = type;
+  token->data = data;
+  token->size = size;
+  token->head = head;
+  token->line = line;
+}
+
+static void token_err(token_t* token, const char* msg)
+{
+  char prefix[BUFSIZ];
+  sprintf(prefix, "%d:%d:", token->line, token->data-token->head+1);
+  err_msg("%s %s from", prefix, msg);
+
+  char foo[BUFSIZ];
+  int len = token->data-token->head;
+  snprintf(foo, len+token->size+1, "%s", token->head);
+  err_msg("%s %s", prefix, foo);
+
+  for (int i = 0; i < len; i++)
+    foo[i] = ' ';
+  foo[len] = '^';
+  foo[len+1] = '\0';
+  err_msg("%s %s", prefix, foo);
+}
+
 static int lexer(char* foo, token_t** tokens, size_t* size)
 {
-  token_t* bud = calloc(strlen(foo), sizeof(token_t));
+  token_t* bud = calloc(strlen(foo)+1, sizeof(token_t));
   if (bud == NULL) {
     err_msg(sys_msg());
     goto err_0;
@@ -157,6 +157,7 @@ static int lexer(char* foo, token_t** tokens, size_t* size)
     else
       set_token(bud+size_++, *foo, foo++, 1, head, line);
 
+  set_token(bud+size_, __BOUND__, foo, 0, head, line);
   *tokens = bud;
   *size = size_;
   return 0;
@@ -166,20 +167,81 @@ err_0:
   return -1;
 }
 
+typedef int action_f(token_t* first, token_t* last);
+
+static token_t* parse_co(token_t* first, token_t* last,
+                      int (*isok)(token_t*),
+                      token_t* (*action)(token_t*, token_t*))
+{
+  token_t* it = first;
+  while (it < last && isok(it))
+    it++;
+  return action(first, it);
+}
+
+static int pass(token_t* token)
+{
+  return 1;
+}
+
+static token_t* do_nothing(token_t* first, token_t* last)
+{
+  return last;
+}
+
+static int is_not_rcomment(token_t* token)
+{
+  return token->type != RCOMMENT;
+}
+
+static token_t* do_comment(token_t* first, token_t* last)
+{
+  if (last->type != RCOMMENT) {
+    token_err(first-1, "missing match }");
+    goto err_0;
+  }
+  return last+1;
+err_0:
+  return NULL;
+}
+
+static int is_not_rcode(token_t* token)
+{
+  return token->type != RCODE;
+}
+
+static token_t* do_code(token_t* first, token_t* last)
+{
+  if (last->type != RCODE) {
+    token_err(first-1, "missing match ]");
+    goto err_0;
+  }
+  // TODO
+  return last+1;
+err_0:
+  return NULL;
+}
+
 static int parse(token_t* first, token_t* last)
 {
-  while (first < last)
+  while (first < last) {
     switch (first->type) {
       case LCOMMENT: {
+        first = parse_co(first+1, last, is_not_rcomment, do_comment);
         break;
       }
       case RCOMMENT: {
+        token_err(first, "missing match {");
+        first = NULL;
         break;
       }
       case LCODE: {
+        first = parse_co(first+1, last, is_not_rcode, do_code);
         break;
       }
       case RCODE: {
+        token_err(first, "missing match [");
+        first = NULL;
         break;
       }
       case VARADR: {
@@ -258,9 +320,17 @@ static int parse(token_t* first, token_t* last)
         break;
       }
       default: {
+        token_err(first, "unknown token");
+        first = NULL;
       }
     }
+
+    if (first == NULL)
+      goto err_0;
+  }
   return 0;
+err_0:
+  return -1;
 }
 
 int main(int argc, char* argv[])
@@ -278,14 +348,10 @@ int main(int argc, char* argv[])
     goto err_1;
   }
 
-  for (int i = 0; i < size; i++) {
-    char foo[BUFSIZ];
-    snprintf(foo, tokens[i].size+1, "%s", tokens[i].data);
-    printf("{%d, '%s'}\n", tokens[i].size, foo);
-    token_err(tokens+i, "test");
+  if (parse(tokens, tokens+size) != 0) {
+    err_msg("parse failed");
+    goto err_2;
   }
-
-  printf("size=%d\n", size);
 
   free(tokens);
   free(foo);
