@@ -3,4 +3,4 @@ dfalse_SOURCES=main.c
 
 .PHONY: test
 test:
-	cat test.df | dfalse
+	 ./dfalse test.df

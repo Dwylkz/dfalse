@@ -60,11 +60,12 @@ static void token_err(const token_t* token);
 
 // type
 typedef enum type_e {
-  VARADDR_TYPE,
+  VARADR_TYPE,
   VALUE_TYPE,
   CODE_TYPE,
   __TYPE_BOUND__
 } type_e;
+static const char* strtype(const type_e type);
 typedef enum boolean_e {
   TRUE = -1,
   FALSE = 0,
@@ -81,6 +82,7 @@ typedef struct type_t {
     } code;
   } data;
 } type_t;
+static void type_err(const type_t* data, const type_e type);
 static type_t* tnew();
 static type_t* tnew_value(int value);
 static type_t* tnew_varadr(type_t* varadr);
@@ -110,17 +112,16 @@ static int lexer(char* foo, token_t** tokens, size_t* size);
 // parser
 typedef int isok_i(token_t*);
 typedef token_t* action_i(token_t*, token_t*);
-static token_t* parse_co(token_t* first, token_t* last, isok_i* isok, action_i* action);
+static token_t* parse_linear(token_t* first, token_t* last, isok_i* isok, action_i* action);
+static token_t* parse_tree(token_t* first, token_t* last, int open, int close, action_i* action);
 static int parse(token_t* first, token_t* last);
 
 // isok
 static int pass(token_t* token);
-static int is_not_rcomment(token_t* token);
-static int is_not_rcode(token_t* token);
 static int is_not_quote(token_t* token);
 
 // action
-static token_t* do_comment(token_t* first, token_t* last);
+static token_t* do_nothing(token_t* first, token_t* last);
 
 static token_t* do_code(token_t* first, token_t* last);
 static token_t* do_varadr(token_t* first, token_t* last);
@@ -167,19 +168,20 @@ int main(int argc, char* argv[])
 
   varadr_init();
   if (parse(tokens, tokens+size) != 0) {
-    err_msg("parse failed");
-    goto err_2;
+    err_msg("interpret failed");
+    goto err_3;
   }
 
   if (!sisempty()) {
     err_msg("stack is not empty");
-    sclear();
-    goto err_2;
+    goto err_3;
   }
 
   free(tokens);
   free(foo);
   return 0;
+err_3:
+    sclear();
 err_2:
   free(tokens);
 err_1:
@@ -237,6 +239,22 @@ err_0:
   return NULL;
 }
 
+static const char* strtype(const type_e type)
+{
+  static const char* strs[] = {
+    "varadr",
+    "value",
+    "function",
+    "__BOUND__"
+  };
+  return strs[type];
+}
+
+static void type_err(const type_t* data, const type_e type)
+{
+  err_msg("expect %s not %s", strtype(type), strtype(data->type));
+}
+
 static void set_token(token_t* token, const token_e type, const char* data, const size_t size,
                const char*head, const int line)
 {
@@ -259,7 +277,7 @@ static void token_err(const token_t* token)
   err_msg("%s %s", prefix, foo);
 
   for (int i = 0; i < len; i++)
-    foo[i] = ' ';
+    foo[i] = isspace(token->head[i])? token->head[i]: ' ';
   foo[len] = '^';
   foo[len+1] = '\0';
   err_msg("%s %s", prefix, foo);
@@ -296,7 +314,7 @@ static type_t* tnew_varadr(type_t* varadr)
   if (bud == NULL)
     goto err_0;
 
-  bud->type = VARADDR_TYPE;
+  bud->type = VARADR_TYPE;
   bud->data.varadr = varadr;
   return bud;
 err_0:
@@ -375,8 +393,11 @@ static int sisempty()
 
 static void sclear()
 {
-  while (!sisempty())
-    tfree(spop());
+  while (!sisempty()) {
+    type_t* data = spop();
+    err_msg("pop %s", strtype(data->type));
+    tfree(data);
+  }
 }
 
 static void varadr_init()
@@ -436,12 +457,41 @@ err_0:
   return -1;
 }
 
-static token_t* parse_co(token_t* first, token_t* last, isok_i* isok, action_i* action)
+static token_t* parse_linear(token_t* first, token_t* last, isok_i* isok, action_i* action)
 {
   token_t* it = first;
   while (it < last && isok(it))
     it++;
   return action(first, it);
+}
+
+static token_t* parse_tree_aux(token_t* first, token_t* last, int down, int up)
+{
+  token_t* it = first;
+  while (it < last && it->type != up)
+    if (it->type == down) {
+      it = parse_tree_aux(it+1, last, down, up);
+      if (it == NULL)
+        return NULL;
+    }
+    else 
+      it++;
+
+  if (it->type != up) {
+    err_msg("missing matched %c", up);
+    token_err(first-1);
+    return NULL;
+  }
+  return it+1;
+}
+
+static token_t* parse_tree(token_t* first, token_t* last, int down, int up, action_i* action)
+{
+  last = parse_tree_aux(first, last, down, up);
+  if (last == NULL)
+    return NULL;
+
+  return action(first, last-1);
 }
 
 static int parse(token_t* first, token_t* last)
@@ -455,7 +505,7 @@ static int parse(token_t* first, token_t* last)
     token_t* save = first;;
     switch (first->type) {
       case LCOMMENT: {
-        first = parse_co(first+1, last, is_not_rcomment, do_comment);
+        first = parse_tree(first+1, last, LCOMMENT, RCOMMENT, do_nothing);
         break;
       }
       case RCOMMENT: {
@@ -464,7 +514,7 @@ static int parse(token_t* first, token_t* last)
         break;
       }
       case LCODE: {
-        first = parse_co(first+1, last, is_not_rcode, do_code);
+        first = parse_tree(first+1, last, LCODE, RCODE, do_code);
         break;
       }
       case RCODE: {
@@ -473,27 +523,27 @@ static int parse(token_t* first, token_t* last)
         break;
       }
       case VARADR: {
-        first = parse_co(first, first+1, pass, do_varadr);
+        first = parse_linear(first, first+1, pass, do_varadr);
         break;
       }
       case VALUE: {
-        first = parse_co(first, first+1, pass, do_value);
+        first = parse_linear(first, first+1, pass, do_value);
         break;
       }
       case CHAR: {
-        first = parse_co(first, first+1, pass, do_char);
+        first = parse_linear(first, first+1, pass, do_char);
         break;
       }
       case ASSIGN: {
-        first = parse_co(first, first+1, pass, do_assign);
+        first = parse_linear(first, first+1, pass, do_assign);
         break;
       }
       case RVAL: {
-        first = parse_co(first, first+1, pass, do_rval);
+        first = parse_linear(first, first+1, pass, do_rval);
         break;
       }
       case APPLY: {
-        first = parse_co(first, first+1, pass, do_apply);
+        first = parse_linear(first, first+1, pass, do_apply);
         break;
       }
       case PLUS:
@@ -504,52 +554,52 @@ static int parse(token_t* first, token_t* last)
       case ISGREATER:
       case AND:
       case OR: {
-        first = parse_co(first, first+1, pass, do_binary);
+        first = parse_linear(first, first+1, pass, do_binary);
         break;
       }
       case NEGATE:
       case NOT: {
-        first = parse_co(first, first+1, pass, do_unary);
+        first = parse_linear(first, first+1, pass, do_unary);
         break;
       }
       case DUPLICATE: {
-        first = parse_co(first, first+1, pass, do_duplicate);
+        first = parse_linear(first, first+1, pass, do_duplicate);
         break;
       }
       case DELETE: {
-        first = parse_co(first, first+1, pass, do_delete);
+        first = parse_linear(first, first+1, pass, do_delete);
         break;
       }
       case SWAP: {
-        first = parse_co(first, first+1, pass, do_swap);
+        first = parse_linear(first, first+1, pass, do_swap);
         break;
       }
       case ROT: {
-        first = parse_co(first, first+1, pass, do_rot);
+        first = parse_linear(first, first+1, pass, do_rot);
         break;
       }
       case IF: {
-        first = parse_co(first, first+1, pass, do_if);
+        first = parse_linear(first, first+1, pass, do_if);
         break;
       }
       case WHILE: {
-        first = parse_co(first, first+1, pass, do_while);
+        first = parse_linear(first, first+1, pass, do_while);
         break;
       }
       case TOINT: {
-        first = parse_co(first, first+1, pass, do_toint);
+        first = parse_linear(first, first+1, pass, do_toint);
         break;
       }
       case QUOTE: {
-        first = parse_co(first+1, last, is_not_quote, do_quote);
+        first = parse_linear(first+1, last, is_not_quote, do_quote);
         break;
       }
       case TOCHAR: {
-        first = parse_co(first, first+1, pass, do_tochar);
+        first = parse_linear(first, first+1, pass, do_tochar);
         break;
       }
       case GETC: {
-        first = parse_co(first, first+1, pass, do_getc);
+        first = parse_linear(first, first+1, pass, do_getc);
         break;
       }
       default: {
@@ -573,34 +623,13 @@ static int pass(token_t* token)
   return 1;
 }
 
-static int is_not_rcomment(token_t* token)
+static token_t* do_nothing(token_t* first, token_t* last)
 {
-  return token->type != RCOMMENT;
-}
-
-static int is_not_rcode(token_t* token)
-{
-  return token->type != RCODE;
-}
-
-static token_t* do_comment(token_t* first, token_t* last)
-{
-  if (last->type != RCOMMENT) {
-    err_msg("missing match }");
-    goto err_0;
-  }
   return last+1;
-err_0:
-  return NULL;
 }
 
 static token_t* do_code(token_t* first, token_t* last)
 {
-  if (last->type != RCODE) {
-    err_msg("missing match ]");
-    goto err_0;
-  }
-
   type_t* data = tnew_code(first, last);
   if (data == NULL) 
     goto err_0;
@@ -669,8 +698,8 @@ static token_t* do_assign(token_t* first, token_t* last)
   if (lval == NULL)
     goto err_0;
 
-  if (lval->type != VARADDR_TYPE) {
-    err_msg("expected varadr");
+  if (lval->type != VARADR_TYPE) {
+    type_err(lval, VARADR_TYPE);
     goto err_1;
   }
 
@@ -695,8 +724,8 @@ static token_t* do_rval(token_t* first, token_t* last)
   if (lval == NULL)
     goto err_0;
 
-  if (lval->type != VARADDR_TYPE) {
-    err_msg("expected varadr");
+  if (lval->type != VARADR_TYPE) {
+    type_err(lval, VARADR_TYPE);
     goto err_1;
   }
 
@@ -724,14 +753,12 @@ static token_t* do_apply(token_t* first, token_t* last)
     goto err_0;
 
   if (data->type != CODE_TYPE) {
-    err_msg("expect function");
+    type_err(data, CODE_TYPE);
     goto err_1;
   }
 
-  if (parse(data->data.code.first, data->data.code.last) != 0) {
-    err_msg("call function failed");
+  if (parse(data->data.code.first, data->data.code.last) != 0)
     goto err_1;
-  }
 
   tfree(data);
   return last;
@@ -748,7 +775,7 @@ static token_t* do_binary(token_t* first, token_t* last)
     goto err_0;
   
   if (rhs->type != VALUE_TYPE) {
-    err_msg("rhs expect value");
+    type_err(rhs, VALUE_TYPE);
     goto err_1;
   }
 
@@ -757,7 +784,7 @@ static token_t* do_binary(token_t* first, token_t* last)
     goto err_1;
 
   if (lhs->type != VALUE_TYPE) {
-    err_msg("lhs expect value");
+    type_err(lhs, VALUE_TYPE);
     goto err_2;
   }
 
@@ -834,7 +861,7 @@ static token_t* do_unary(token_t* first, token_t* last)
     goto err_0;
 
   if (rval->type != VALUE_TYPE) {
-    err_msg("rval expect value");
+    type_err(rval, VALUE_TYPE);
     goto err_1;
   }
 
@@ -845,7 +872,7 @@ static token_t* do_unary(token_t* first, token_t* last)
         break;
       }
       case NOT: {
-        rvalval = rvalval == TRUE? FALSE: TRUE;
+        rvalval = rvalval == FALSE? TRUE: FALSE;
         break;
       }
       default: {
@@ -960,7 +987,7 @@ static token_t* do_if(token_t* first, token_t* last)
     goto err_0;
 
   if (rhs->type != CODE_TYPE) {
-    err_msg("rhs expect function");
+    type_err(rhs, CODE_TYPE);
     goto err_1;
   }
 
@@ -969,15 +996,13 @@ static token_t* do_if(token_t* first, token_t* last)
     goto err_1;
 
   if (lhs->type != VALUE_TYPE) {
-    err_msg("lhs expect value");
+    type_err(lhs, VALUE_TYPE);
     goto err_2;
   }
 
   if (lhs->data.value != FALSE
-      && parse(rhs->data.code.first, rhs->data.code.last) != 0) {
-    err_msg("call rhs function failed");
+      && parse(rhs->data.code.first, rhs->data.code.last) != 0)
     goto err_2;
-  }
 
   tfree(lhs);
   tfree(rhs);
@@ -997,7 +1022,7 @@ static token_t* do_while(token_t* first, token_t* last)
     goto err_0;
 
   if (rhs->type != CODE_TYPE) {
-    err_msg("rhs expect function");
+    type_err(rhs, CODE_TYPE);
     goto err_1;
   }
 
@@ -1006,31 +1031,32 @@ static token_t* do_while(token_t* first, token_t* last)
     goto err_1;
 
   if (lhs->type != CODE_TYPE) {
-    err_msg("lhs expect value");
+    type_err(lhs, CODE_TYPE);
     goto err_2;
   }
 
   type_t* benchmark;
   while (1) {
-    if (parse(lhs->data.code.first, lhs->data.code.last) != 0) {
-      err_msg("call lhs function failed");
+    if (parse(lhs->data.code.first, lhs->data.code.last) != 0)
       goto err_2;
-    }
 
     benchmark = spop();
     if (benchmark == NULL)
       goto err_2;
 
     if (benchmark->type != VALUE_TYPE) {
-      err_msg("benchmark expect value");
+      type_err(benchmark, VALUE_TYPE);
       goto err_3;
     }
 
-    if (benchmark->data.value != FALSE
-        && parse(rhs->data.code.first, rhs->data.code.last) != 0) {
-      err_msg("call rhs function failed");
-      goto err_3;
+    if (benchmark->data.value == FALSE) {
+      tfree(benchmark);
+      break;
     }
+
+    if (parse(rhs->data.code.first, rhs->data.code.last) != 0)
+      goto err_3;
+
     tfree(benchmark);
   }
 
@@ -1054,7 +1080,7 @@ static token_t* do_toint(token_t* first, token_t* last)
     goto err_0;
 
   if (data->type != VALUE_TYPE) {
-    err_msg("expect value");
+    type_err(data, VALUE_TYPE);
     goto err_1;
   }
 
@@ -1075,7 +1101,7 @@ static int is_not_quote(token_t* token)
 static token_t* do_quote(token_t* first, token_t* last)
 {
   if (last->type != QUOTE) {
-    err_msg("missing close '\"'");
+    err_msg("missing close \"");
     goto err_0;
   }
 
@@ -1095,7 +1121,7 @@ static token_t* do_tochar(token_t* first, token_t* last)
     goto err_0;
 
   if (data->type != VALUE_TYPE) {
-    err_msg("expect value");
+    type_err(data, VALUE_TYPE);
     goto err_1;
   }
 
