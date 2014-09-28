@@ -14,6 +14,7 @@
 
 @SET_MAKE@
 
+
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
@@ -79,7 +80,8 @@ POST_UNINSTALL = :
 bin_PROGRAMS = dfalse$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/build-aux/depcomp
+	$(top_srcdir)/build-aux/depcomp $(vimplugin_HEADERS) \
+	$(vimsyntax_HEADERS)
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -88,7 +90,8 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am__installdirs = "$(DESTDIR)$(bindir)"
+am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(vimplugindir)" \
+	"$(DESTDIR)$(vimsyntaxdir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_dfalse_OBJECTS = main.$(OBJEXT)
 dfalse_OBJECTS = $(am_dfalse_OBJECTS)
@@ -128,6 +131,34 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
+am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
+am__vpath_adj = case $$p in \
+    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
+    *) f=$$p;; \
+  esac;
+am__strip_dir = f=`echo $$p | sed -e 's|^.*/||'`;
+am__install_max = 40
+am__nobase_strip_setup = \
+  srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*|]/\\\\&/g'`
+am__nobase_strip = \
+  for p in $$list; do echo "$$p"; done | sed -e "s|$$srcdirstrip/||"
+am__nobase_list = $(am__nobase_strip_setup); \
+  for p in $$list; do echo "$$p $$p"; done | \
+  sed "s| $$srcdirstrip/| |;"' / .*\//!s/ .*/ ./; s,\( .*\)/[^/]*$$,\1,' | \
+  $(AWK) 'BEGIN { files["."] = "" } { files[$$2] = files[$$2] " " $$1; \
+    if (++n[$$2] == $(am__install_max)) \
+      { print $$2, files[$$2]; n[$$2] = 0; files[$$2] = "" } } \
+    END { for (dir in files) print dir, files[dir] }'
+am__base_list = \
+  sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
+  sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
+am__uninstall_files_from_dir = { \
+  test -z "$$files" \
+    || { test ! -d "$$dir" && test ! -f "$$dir" && test ! -r "$$dir"; } \
+    || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
+         $(am__cd) "$$dir" && rm -f $$files; }; \
+  }
+HEADERS = $(vimplugin_HEADERS) $(vimsyntax_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -233,6 +264,10 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 dfalse_SOURCES = main.c
+vimsyntaxdir = ${HOME}/.vim/syntax
+vimsyntax_HEADERS = vim/syntax/df.vim
+vimplugindir = ${HOME}/.vim/plugin
+vimplugin_HEADERS = vim/plugin/df.vim
 all: all-am
 
 .SUFFIXES:
@@ -335,6 +370,48 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+install-vimpluginHEADERS: $(vimplugin_HEADERS)
+	@$(NORMAL_INSTALL)
+	@list='$(vimplugin_HEADERS)'; test -n "$(vimplugindir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(vimplugindir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(vimplugindir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(vimplugindir)'"; \
+	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(vimplugindir)" || exit $$?; \
+	done
+
+uninstall-vimpluginHEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(vimplugin_HEADERS)'; test -n "$(vimplugindir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(vimplugindir)'; $(am__uninstall_files_from_dir)
+install-vimsyntaxHEADERS: $(vimsyntax_HEADERS)
+	@$(NORMAL_INSTALL)
+	@list='$(vimsyntax_HEADERS)'; test -n "$(vimsyntaxdir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(vimsyntaxdir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(vimsyntaxdir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(vimsyntaxdir)'"; \
+	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(vimsyntaxdir)" || exit $$?; \
+	done
+
+uninstall-vimsyntaxHEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(vimsyntax_HEADERS)'; test -n "$(vimsyntaxdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(vimsyntaxdir)'; $(am__uninstall_files_from_dir)
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -420,9 +497,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS)
+all-am: Makefile $(PROGRAMS) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(bindir)"; do \
+	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(vimplugindir)" "$(DESTDIR)$(vimsyntaxdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -477,7 +554,7 @@ info: info-am
 
 info-am:
 
-install-data-am:
+install-data-am: install-vimpluginHEADERS install-vimsyntaxHEADERS
 
 install-dvi: install-dvi-am
 
@@ -522,7 +599,8 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS
+uninstall-am: uninstall-binPROGRAMS uninstall-vimpluginHEADERS \
+	uninstall-vimsyntaxHEADERS
 
 .MAKE: install-am install-strip
 
@@ -534,11 +612,13 @@ uninstall-am: uninstall-binPROGRAMS
 	install-dvi install-dvi-am install-exec install-exec-am \
 	install-html install-html-am install-info install-info-am \
 	install-man install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
+	install-ps-am install-strip install-vimpluginHEADERS \
+	install-vimsyntaxHEADERS installcheck installcheck-am \
 	installdirs maintainer-clean maintainer-clean-generic \
 	mostlyclean mostlyclean-compile mostlyclean-generic pdf pdf-am \
 	ps ps-am tags tags-am uninstall uninstall-am \
-	uninstall-binPROGRAMS
+	uninstall-binPROGRAMS uninstall-vimpluginHEADERS \
+	uninstall-vimsyntaxHEADERS
 
 
 .PHONY: test
