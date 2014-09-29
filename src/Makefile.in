@@ -80,8 +80,7 @@ POST_UNINSTALL = :
 bin_PROGRAMS = dfalse$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/build-aux/depcomp $(vimplugin_HEADERS) \
-	$(vimsyntax_HEADERS)
+	$(top_srcdir)/build-aux/depcomp
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -90,7 +89,7 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(vimplugindir)" \
+am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(vimftdetectdir)" \
 	"$(DESTDIR)$(vimsyntaxdir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_dfalse_OBJECTS = main.$(OBJEXT)
@@ -158,7 +157,7 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-HEADERS = $(vimplugin_HEADERS) $(vimsyntax_HEADERS)
+DATA = $(vimftdetect_DATA) $(vimsyntax_DATA)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -265,9 +264,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 dfalse_SOURCES = main.c
 vimsyntaxdir = ${HOME}/.vim/syntax
-vimsyntax_HEADERS = vim/syntax/df.vim
-vimplugindir = ${HOME}/.vim/plugin
-vimplugin_HEADERS = vim/plugin/df.vim
+vimsyntax_DATA = vim/syntax/df.vim
+vimftdetectdir = ${HOME}/.vim/ftdetect
+vimftdetect_DATA = vim/ftdetect/df.vim
 all: all-am
 
 .SUFFIXES:
@@ -370,30 +369,30 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-install-vimpluginHEADERS: $(vimplugin_HEADERS)
+install-vimftdetectDATA: $(vimftdetect_DATA)
 	@$(NORMAL_INSTALL)
-	@list='$(vimplugin_HEADERS)'; test -n "$(vimplugindir)" || list=; \
+	@list='$(vimftdetect_DATA)'; test -n "$(vimftdetectdir)" || list=; \
 	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(vimplugindir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(vimplugindir)" || exit 1; \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(vimftdetectdir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(vimftdetectdir)" || exit 1; \
 	fi; \
 	for p in $$list; do \
 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
 	  echo "$$d$$p"; \
 	done | $(am__base_list) | \
 	while read files; do \
-	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(vimplugindir)'"; \
-	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(vimplugindir)" || exit $$?; \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(vimftdetectdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(vimftdetectdir)" || exit $$?; \
 	done
 
-uninstall-vimpluginHEADERS:
+uninstall-vimftdetectDATA:
 	@$(NORMAL_UNINSTALL)
-	@list='$(vimplugin_HEADERS)'; test -n "$(vimplugindir)" || list=; \
+	@list='$(vimftdetect_DATA)'; test -n "$(vimftdetectdir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
-	dir='$(DESTDIR)$(vimplugindir)'; $(am__uninstall_files_from_dir)
-install-vimsyntaxHEADERS: $(vimsyntax_HEADERS)
+	dir='$(DESTDIR)$(vimftdetectdir)'; $(am__uninstall_files_from_dir)
+install-vimsyntaxDATA: $(vimsyntax_DATA)
 	@$(NORMAL_INSTALL)
-	@list='$(vimsyntax_HEADERS)'; test -n "$(vimsyntaxdir)" || list=; \
+	@list='$(vimsyntax_DATA)'; test -n "$(vimsyntaxdir)" || list=; \
 	if test -n "$$list"; then \
 	  echo " $(MKDIR_P) '$(DESTDIR)$(vimsyntaxdir)'"; \
 	  $(MKDIR_P) "$(DESTDIR)$(vimsyntaxdir)" || exit 1; \
@@ -403,13 +402,13 @@ install-vimsyntaxHEADERS: $(vimsyntax_HEADERS)
 	  echo "$$d$$p"; \
 	done | $(am__base_list) | \
 	while read files; do \
-	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(vimsyntaxdir)'"; \
-	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(vimsyntaxdir)" || exit $$?; \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(vimsyntaxdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(vimsyntaxdir)" || exit $$?; \
 	done
 
-uninstall-vimsyntaxHEADERS:
+uninstall-vimsyntaxDATA:
 	@$(NORMAL_UNINSTALL)
-	@list='$(vimsyntax_HEADERS)'; test -n "$(vimsyntaxdir)" || list=; \
+	@list='$(vimsyntax_DATA)'; test -n "$(vimsyntaxdir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	dir='$(DESTDIR)$(vimsyntaxdir)'; $(am__uninstall_files_from_dir)
 
@@ -497,9 +496,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS) $(HEADERS)
+all-am: Makefile $(PROGRAMS) $(DATA)
 installdirs:
-	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(vimplugindir)" "$(DESTDIR)$(vimsyntaxdir)"; do \
+	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(vimftdetectdir)" "$(DESTDIR)$(vimsyntaxdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -554,7 +553,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-vimpluginHEADERS install-vimsyntaxHEADERS
+install-data-am: install-vimftdetectDATA install-vimsyntaxDATA
 
 install-dvi: install-dvi-am
 
@@ -599,8 +598,8 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-vimpluginHEADERS \
-	uninstall-vimsyntaxHEADERS
+uninstall-am: uninstall-binPROGRAMS uninstall-vimftdetectDATA \
+	uninstall-vimsyntaxDATA
 
 .MAKE: install-am install-strip
 
@@ -612,13 +611,12 @@ uninstall-am: uninstall-binPROGRAMS uninstall-vimpluginHEADERS \
 	install-dvi install-dvi-am install-exec install-exec-am \
 	install-html install-html-am install-info install-info-am \
 	install-man install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip install-vimpluginHEADERS \
-	install-vimsyntaxHEADERS installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic pdf pdf-am \
-	ps ps-am tags tags-am uninstall uninstall-am \
-	uninstall-binPROGRAMS uninstall-vimpluginHEADERS \
-	uninstall-vimsyntaxHEADERS
+	install-ps-am install-strip install-vimftdetectDATA \
+	install-vimsyntaxDATA installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-vimftdetectDATA uninstall-vimsyntaxDATA
 
 
 .PHONY: test

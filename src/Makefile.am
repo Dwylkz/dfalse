@@ -2,10 +2,13 @@ bin_PROGRAMS=dfalse
 dfalse_SOURCES=main.c
 
 vimsyntaxdir=${HOME}/.vim/syntax
-vimsyntax_HEADERS=vim/syntax/df.vim
+vimsyntax_DATA=vim/syntax/df.vim
 
-vimplugindir=${HOME}/.vim/plugin
-vimplugin_HEADERS=vim/plugin/df.vim
+vimftdetectdir=${HOME}/.vim/ftdetect
+vimftdetect_DATA=vim/ftdetect/df.vim
+
+vimindentdir=${HOME}/.vim/indent
+vimindent_DATA=vim/indent/df.vim
 
 .PHONY: test
 test:

@@ -1,6 +1,8 @@
-"ahahhaha"
-
 {
+	"kkhahhaha"
+	TODO
+	XXX
+	FIXME
 	test case
 		5 2 +."
 		"
@@ -25,14 +27,13 @@
 		"
 		[1_]![^,]?
 		[0 1_][.]#
+		'a
 }
-
-test
-
-'a
 
 1 0 =~ .
 
-["abababa"]
+[0]["abababa
+"]#
 
-1 + 1
+1_["haha
+"]?
