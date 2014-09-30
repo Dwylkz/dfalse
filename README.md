@@ -4,6 +4,7 @@
 without buffer flush operation and stack pick operation
 as my keyboard has no that two funny keys.
 vim syntax hightlight and indent is inside.
+
 ### install
 > ```bash
 ./configure ...
