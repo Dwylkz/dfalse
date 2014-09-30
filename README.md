@@ -1,39 +1,41 @@
 ## FALSE interpretor
 ### description
-[FALSE](http://strlen.com/false/false.txt) programming language implement purely written in C
+> [FALSE](http://strlen.com/false/false.txt) programming language implement purely written in C
 without buffer flush operation and stack pick operation
 as my keyboard has no that two funny keys.
 vim syntax hightlight and indent is inside.
 ### install
-```bash
+> ```bash
 ./configure ...
 make install
 ```
+
 ### usage
-```bash
+> ```bash
 <usage> = "dfalse" <src-with-df-suffix>
 ```
+
 ### demo
-#### src.df:
+> src.df:
 ```false
 { simple echo }
 "hello echo>"
 [^$1_=~][,]#%
 ```
-#### execute like 
+execute like 
 ```bash
 dfalse src.df
 hello echo>hehe
 hehe
 ```
-#### explicit error message
-#### src.df
+explicit error message
+src.df
 ```false
 { simple echo }
 "hello echo>"
 [^$1_=][,#
 ```
-#### again execute it
+again execute it
 ```bash
 dfalse src.df
 missing matched ]
