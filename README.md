@@ -1,6 +1,7 @@
-## FALSE interpretor
+## [FALSE](http://strlen.com/false/false.txt)
 ### description
-> [FALSE](http://strlen.com/false/false.txt) programming language implement purely written in C
+> FALSE programming language implement purely written in C
+using functional programming skill
 without buffer flush operation and stack pick operation
 as my keyboard has no that two funny keys.
 vim syntax hightlight and indent is inside.
@@ -29,7 +30,7 @@ dfalse src.df
 hello echo>hehe
 hehe
 ```
-explicit error message
+stack trace  error message
 src.df
 ```false
 { simple echo }
