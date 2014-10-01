@@ -7,7 +7,7 @@ as my keyboard has no that two funny keys.
 vim syntax hightlight and indent is inside.
 """
 ### install
-"""bash
+"""
 ./configure ...
 make install
 """
@@ -23,7 +23,7 @@ make install
 [^$1_=~][,]#%
 """
 > excute like this
-"""bash
+"""
 dfalse src.df
 
 hello echo>hehe
@@ -35,7 +35,7 @@ hehe
 "hello echo>"
 [^$1_=][,#
 """
-"""bash
+"""
 dfalse src.df
 missing matched ]
 3:8: from here
