@@ -90,7 +90,7 @@ CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(vimftdetectdir)" \
-	"$(DESTDIR)$(vimsyntaxdir)"
+	"$(DESTDIR)$(vimindentdir)" "$(DESTDIR)$(vimsyntaxdir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_dfalse_OBJECTS = main.$(OBJEXT)
 dfalse_OBJECTS = $(am_dfalse_OBJECTS)
@@ -157,7 +157,7 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-DATA = $(vimftdetect_DATA) $(vimsyntax_DATA)
+DATA = $(vimftdetect_DATA) $(vimindent_DATA) $(vimsyntax_DATA)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -267,6 +267,8 @@ vimsyntaxdir = ${HOME}/.vim/syntax
 vimsyntax_DATA = vim/syntax/df.vim
 vimftdetectdir = ${HOME}/.vim/ftdetect
 vimftdetect_DATA = vim/ftdetect/df.vim
+vimindentdir = ${HOME}/.vim/indent
+vimindent_DATA = vim/indent/df.vim
 all: all-am
 
 .SUFFIXES:
@@ -390,6 +392,27 @@ uninstall-vimftdetectDATA:
 	@list='$(vimftdetect_DATA)'; test -n "$(vimftdetectdir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	dir='$(DESTDIR)$(vimftdetectdir)'; $(am__uninstall_files_from_dir)
+install-vimindentDATA: $(vimindent_DATA)
+	@$(NORMAL_INSTALL)
+	@list='$(vimindent_DATA)'; test -n "$(vimindentdir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(vimindentdir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(vimindentdir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(vimindentdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(vimindentdir)" || exit $$?; \
+	done
+
+uninstall-vimindentDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(vimindent_DATA)'; test -n "$(vimindentdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(vimindentdir)'; $(am__uninstall_files_from_dir)
 install-vimsyntaxDATA: $(vimsyntax_DATA)
 	@$(NORMAL_INSTALL)
 	@list='$(vimsyntax_DATA)'; test -n "$(vimsyntaxdir)" || list=; \
@@ -498,7 +521,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(PROGRAMS) $(DATA)
 installdirs:
-	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(vimftdetectdir)" "$(DESTDIR)$(vimsyntaxdir)"; do \
+	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(vimftdetectdir)" "$(DESTDIR)$(vimindentdir)" "$(DESTDIR)$(vimsyntaxdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -553,7 +576,8 @@ info: info-am
 
 info-am:
 
-install-data-am: install-vimftdetectDATA install-vimsyntaxDATA
+install-data-am: install-vimftdetectDATA install-vimindentDATA \
+	install-vimsyntaxDATA
 
 install-dvi: install-dvi-am
 
@@ -599,7 +623,7 @@ ps: ps-am
 ps-am:
 
 uninstall-am: uninstall-binPROGRAMS uninstall-vimftdetectDATA \
-	uninstall-vimsyntaxDATA
+	uninstall-vimindentDATA uninstall-vimsyntaxDATA
 
 .MAKE: install-am install-strip
 
@@ -612,11 +636,12 @@ uninstall-am: uninstall-binPROGRAMS uninstall-vimftdetectDATA \
 	install-html install-html-am install-info install-info-am \
 	install-man install-pdf install-pdf-am install-ps \
 	install-ps-am install-strip install-vimftdetectDATA \
-	install-vimsyntaxDATA installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
-	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
-	uninstall-vimftdetectDATA uninstall-vimsyntaxDATA
+	install-vimindentDATA install-vimsyntaxDATA installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
+	uninstall-am uninstall-binPROGRAMS uninstall-vimftdetectDATA \
+	uninstall-vimindentDATA uninstall-vimsyntaxDATA
 
 
 .PHONY: test
