@@ -56,3 +56,5 @@ function end
 hello echo>
 ```
 [more demo](https://github.com/Dwylkz/acmps/tree/master/cf/470)
+the problems are codeforce 470 are solved by this interpretor
+as the explicit error message is very useful LoL
