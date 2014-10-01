@@ -13,3 +13,7 @@ vimindent_DATA=vim/indent/df.vim
 .PHONY: test
 test:
 	 ./dfalse test.df
+
+.PHONY: run
+run:
+	gdb dfalse

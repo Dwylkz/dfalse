@@ -37,6 +37,7 @@ typedef enum token_e {
   DELETE = '%',
   SWAP = '\\',
   ROT = '@',
+  PICK = 'O',
   IF = '?',
   WHILE = '#',
   TOINT = '.',
@@ -89,6 +90,7 @@ static type_t* tnew_varadr(type_t* varadr);
 static type_t* tnew_code(token_t* first, token_t* last);
 static void tfree(type_t* type);
 static type_t* tcopy(const type_t* from, type_t* to);
+static void tshow(const type_t* self);
 
 // global stack
 typedef struct stack_t {
@@ -100,6 +102,7 @@ static int spush(type_t* data);
 static type_t* spop();
 static int sisempty();
 static void sclear();
+static type_t* spick(const int index);
 
 // global 
 #define VARADDR_SIZE 26
@@ -141,6 +144,7 @@ static token_t* do_duplicate(token_t* first, token_t* last);
 static token_t* do_delete(token_t* first, token_t* last);
 static token_t* do_swap(token_t* first, token_t* last);
 static token_t* do_rot(token_t* first, token_t* last);
+static token_t* do_pick(token_t* first, token_t* last);
 
 static token_t* do_if(token_t* first, token_t* last);
 static token_t* do_while(token_t* first, token_t* last);
@@ -220,7 +224,7 @@ static char* loadfile(const char* filename)
   long size = ftell(file);
   rewind(file);
 
-  char* foo = calloc(size+2, 1);
+  char* foo = calloc(size+1, 1);
   if (foo == NULL) {
     err_msg(sys_msg());
     goto err_1;
@@ -230,6 +234,7 @@ static char* loadfile(const char* filename)
     err_msg(sys_msg());
     goto err_1;
   }
+  foo[size] = '\0';
 
   fclose(file);
   return foo;
@@ -245,7 +250,7 @@ static const char* strtype(const type_e type)
     "varadr",
     "value",
     "function",
-    "__BOUND__"
+    "__TYPE_UNDEFINE__"
   };
   return strs[type];
 }
@@ -268,7 +273,7 @@ static void set_token(token_t* token, const token_e type, const char* data, cons
 static void token_err(const token_t* token)
 {
   char prefix[BUFSIZ];
-  sprintf(prefix, "%d:%d:", token->line, token->data-token->head+1);
+  sprintf(prefix, "%d:%d:", token->line, (int)(token->data-token->head+1));
   err_msg("%s from here", prefix);
 
   char foo[BUFSIZ];
@@ -354,6 +359,29 @@ err_0:
   return NULL;
 }
 
+static void tshow(const type_t* self)
+{
+  const char* type_str = strtype(self->type);
+  switch (self->type) {
+    case VALUE_TYPE: {
+      err_msg("%s %d", type_str, self->data.value);
+      break;
+    }
+    case VARADR_TYPE: {
+      err_msg("%s %c", type_str, self->data.varadr-g_varadr+'a');
+      break;
+    }
+    case CODE_TYPE: {
+      err_msg("%s start", type_str);
+      token_err(self->data.code.first);
+      err_msg("%s end", type_str);
+      break;
+    }
+    default: {
+    }
+  }
+}
+
 static int spush(type_t* data)
 {
   stack_t* bud = malloc(sizeof(stack_t));
@@ -395,9 +423,25 @@ static void sclear()
 {
   while (!sisempty()) {
     type_t* data = spop();
-    err_msg("pop %s", strtype(data->type));
+    err_msg("pop:");
+    tshow(data);
     tfree(data);
   }
+}
+
+static type_t* spick(const int index)
+{
+  stack_t* found = g_top;
+  for (int i = 0; found != NULL && i < index; i++)
+    found = found->to;
+
+  if (found == NULL) {
+    err_msg("you pick too deep");
+    goto err_0;
+  }
+  return found->data;
+err_0:
+  return NULL;
 }
 
 static void varadr_init()
@@ -502,7 +546,7 @@ static int parse(token_t* first, token_t* last)
       continue;
     }
 
-    token_t* save = first;;
+    token_t* save = first;
     switch (first->type) {
       case LCOMMENT: {
         first = parse_tree(first+1, last, LCOMMENT, RCOMMENT, do_nothing);
@@ -576,6 +620,10 @@ static int parse(token_t* first, token_t* last)
       }
       case ROT: {
         first = parse_linear(first, first+1, pass, do_rot);
+        break;
+      }
+      case PICK: {
+        first = parse_linear(first, first+1, pass, do_pick);
         break;
       }
       case IF: {
@@ -976,6 +1024,38 @@ err_2:
   tfree(mhs);
 err_1:
   tfree(rhs);
+err_0:
+  return NULL;
+}
+
+static token_t* do_pick(token_t* first, token_t* last)
+{
+  type_t* index = spop();
+  if (index == NULL)
+    goto err_0;
+
+  if (index->type != VALUE_TYPE) {
+    type_err(index, VALUE_TYPE);
+    goto err_1;
+  }
+
+  type_t* src = spick(index->data.value);
+  if (src == NULL)
+    goto err_1;
+
+  type_t* dest = tcopy(src, NULL);
+  if (src == NULL)
+    goto err_1;
+
+  if (spush(dest) != 0)
+    goto err_2;
+
+  tfree(index);
+  return last;
+err_2:
+  tfree(dest);
+err_1:
+  tfree(index);
 err_0:
   return NULL;
 }

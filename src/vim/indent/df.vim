@@ -25,7 +25,7 @@ func! DfalseIndent()
 		let shift -= &shiftwidth
 	endif
 
-	return shift
+	return lispindent('.')
 endfunc
 
 setlocal expandtab
